@@ -19,6 +19,9 @@ export class VoiceManager {
     this.persona = { id: 'female', gender: 'female', pitch: 1.08, rate: 1.0 };
     this.preferredVoice = null;
     this.speechTimeoutRef = null;
+    this.interimFallbackTimeoutRef = null;
+    this.postSpeechEchoTimeout = null;
+    this.accumulatedSpeech = '';
 
     this.initSpeechSynthesis();
   }
@@ -190,37 +193,51 @@ export class VoiceManager {
         return;
       }
 
-      let interim = '';
-      let finalSpeech = '';
+      let currentEventFinal = '';
+      let currentEventInterim = '';
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const item = event.results[i];
         if (item.isFinal) {
-          finalSpeech += item[0].transcript;
+          currentEventFinal += ' ' + item[0].transcript;
         } else {
-          interim += item[0].transcript;
+          currentEventInterim += ' ' + item[0].transcript;
         }
       }
 
-      if (interim && this.onInterimSpeech && this.callState === 'listening') {
-        this.onInterimSpeech(interim);
+      if (currentEventFinal.trim()) {
+        this.accumulatedSpeech = (this.accumulatedSpeech + ' ' + currentEventFinal).trim();
       }
 
-      if (finalSpeech.trim()) {
-        if (this.speechTimeoutRef) {
-          clearTimeout(this.speechTimeoutRef);
-        }
+      const totalSpoken = (this.accumulatedSpeech + ' ' + currentEventInterim).trim();
+      if (totalSpoken && this.onInterimSpeech && this.callState === 'listening') {
+        this.onInterimSpeech(totalSpoken);
+      }
 
-        const candidateText = finalSpeech.trim();
+      // Clear any pending timers
+      if (this.speechTimeoutRef) {
+        clearTimeout(this.speechTimeoutRef);
+        this.speechTimeoutRef = null;
+      }
+      if (this.interimFallbackTimeoutRef) {
+        clearTimeout(this.interimFallbackTimeoutRef);
+        this.interimFallbackTimeoutRef = null;
+      }
+
+      // If user is actively saying interim syllables, DO NOT cut them off!
+      if (currentEventInterim.trim()) {
+        // Set a safety fallback timer (1800ms) in case browser fails to mark isFinal
+        this.interimFallbackTimeoutRef = setTimeout(() => {
+          this.commitUserSpeech();
+        }, 1800);
+        return;
+      }
+
+      // If user paused or finished a phrase, wait 1250ms of quiet so they can finish natural sentences
+      if (this.accumulatedSpeech.trim().length >= 2) {
         this.speechTimeoutRef = setTimeout(() => {
-          if (this.onInterimSpeech) this.onInterimSpeech('');
-          if (this.isCallActive && this.callState === 'listening' && !this.isMuted) {
-            this.pauseListeningForProcessing();
-            if (this.onUserSpeech) {
-              this.onUserSpeech(candidateText);
-            }
-          }
-        }, 300);
+          this.commitUserSpeech();
+        }, 1250);
       }
     };
 
@@ -231,7 +248,7 @@ export class VoiceManager {
     };
 
     this.recognition.onend = () => {
-      if (this.isCallActive && this.callState === 'listening') {
+      if (this.isCallActive && this.callState === 'listening' && !this.isMuted) {
         try {
           this.recognition.start();
         } catch (e) {}
@@ -243,12 +260,42 @@ export class VoiceManager {
     } catch (e) {}
   }
 
+  commitUserSpeech() {
+    if (this.speechTimeoutRef) {
+      clearTimeout(this.speechTimeoutRef);
+      this.speechTimeoutRef = null;
+    }
+    if (this.interimFallbackTimeoutRef) {
+      clearTimeout(this.interimFallbackTimeoutRef);
+      this.interimFallbackTimeoutRef = null;
+    }
+
+    const candidate = this.accumulatedSpeech.trim();
+    this.accumulatedSpeech = '';
+
+    if (this.onInterimSpeech) {
+      this.onInterimSpeech('');
+    }
+
+    if (candidate.length >= 2 && this.isCallActive && this.callState === 'listening' && !this.isMuted) {
+      this.pauseListeningForProcessing();
+      if (this.onUserSpeech) {
+        this.onUserSpeech(candidate);
+      }
+    }
+  }
+
   pauseListeningForProcessing() {
     this.setCallState('processing');
     if (this.speechTimeoutRef) {
       clearTimeout(this.speechTimeoutRef);
       this.speechTimeoutRef = null;
     }
+    if (this.interimFallbackTimeoutRef) {
+      clearTimeout(this.interimFallbackTimeoutRef);
+      this.interimFallbackTimeoutRef = null;
+    }
+    this.accumulatedSpeech = '';
     if (this.recognition) {
       try {
         this.recognition.abort();
@@ -259,6 +306,15 @@ export class VoiceManager {
   resumeListening() {
     if (!this.isCallActive) return;
     this.setCallState('listening');
+    this.accumulatedSpeech = '';
+    if (this.speechTimeoutRef) {
+      clearTimeout(this.speechTimeoutRef);
+      this.speechTimeoutRef = null;
+    }
+    if (this.interimFallbackTimeoutRef) {
+      clearTimeout(this.interimFallbackTimeoutRef);
+      this.interimFallbackTimeoutRef = null;
+    }
     if (this.recognition) {
       try {
         this.recognition.abort();
@@ -274,6 +330,11 @@ export class VoiceManager {
       if (onEnd) onEnd();
       this.resumeListening();
       return;
+    }
+
+    if (this.postSpeechEchoTimeout) {
+      clearTimeout(this.postSpeechEchoTimeout);
+      this.postSpeechEchoTimeout = null;
     }
 
     if (this.recognition) {
@@ -301,7 +362,12 @@ export class VoiceManager {
       finished = true;
       if (this.onBotStopSpeaking) this.onBotStopSpeaking();
       if (this.isCallActive) {
-        this.resumeListening();
+        // Echo guard: delay 450ms before opening mic so speaker sound doesn't echo into mic
+        this.postSpeechEchoTimeout = setTimeout(() => {
+          if (this.isCallActive && this.callState !== 'processing') {
+            this.resumeListening();
+          }
+        }, 450);
       } else {
         this.setCallState('ended');
       }
@@ -328,10 +394,22 @@ export class VoiceManager {
     this.isCallActive = false;
     this.setCallState('ending');
 
+    if (this.postSpeechEchoTimeout) {
+      clearTimeout(this.postSpeechEchoTimeout);
+      this.postSpeechEchoTimeout = null;
+    }
+
     if (this.speechTimeoutRef) {
       clearTimeout(this.speechTimeoutRef);
       this.speechTimeoutRef = null;
     }
+
+    if (this.interimFallbackTimeoutRef) {
+      clearTimeout(this.interimFallbackTimeoutRef);
+      this.interimFallbackTimeoutRef = null;
+    }
+
+    this.accumulatedSpeech = '';
 
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();

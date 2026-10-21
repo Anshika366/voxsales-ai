@@ -556,9 +556,12 @@ export default function LiveCallStudio({
             {interimText && (
               <div className="flex gap-2.5 items-start justify-end">
                 <div className="max-w-[80%] rounded-xl rounded-tr-xs px-3.5 py-2 text-xs bg-cyan-950/40 text-cyan-200 border border-cyan-500/30 italic">
-                  <span className="block text-[10px] not-italic font-mono text-cyan-400 uppercase tracking-wider mb-0.5 font-bold">
-                    Transcribing...
-                  </span>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span className="text-[10px] not-italic font-mono text-cyan-400 uppercase tracking-wider font-bold">
+                      Listening to your question...
+                    </span>
+                  </div>
                   "{interimText}"
                 </div>
                 <CustomerAvatar size="sm" isSpeaking={true} className="mt-0.5" />

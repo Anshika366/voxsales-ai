@@ -1,8 +1,7 @@
 const GEMINI_MODELS = [
-  'gemini-flash-lite-latest',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
-  'gemini-2.5-flash'
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 export async function handleApiChat(reqBody, serverApiKey) {
@@ -113,6 +112,11 @@ CORE CONVERSATIONAL INTELLIGENCE RULES:
             if (rawText && rawText.trim()) {
               const cleaned = rawText.replace(/[*#_~`]/g, '').trim();
               return { text: cleaned, provider: 'gemini', model: modelName };
+            }
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            if (errData?.error?.message) {
+              console.warn(`[Gemini API] ${modelName} error:`, errData.error.message);
             }
           }
         } catch (callErr) {}
