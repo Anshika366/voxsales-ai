@@ -51,7 +51,7 @@ export default function SettingsPage({
         const data = await res.json();
         setAiTestResult({
           success: true,
-          message: `Backend Operational: ${data.provider === 'gemini' ? 'Gemini 2.5 Flash' : 'Local Fallback'} engine active.`
+          message: `Backend Operational: ${data.provider === 'gemini' ? (data.model || 'Gemini AI') : 'Local Fallback'} engine active.`
         });
       } else {
         setAiTestResult({

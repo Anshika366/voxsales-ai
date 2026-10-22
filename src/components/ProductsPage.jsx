@@ -262,9 +262,16 @@ export default function ProductsPage({
 
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-[#141C2E] border border-white/[0.06]">
-                <span className="text-slate-400">Pricing Model:</span>
+                <span className="text-slate-400">Standard Pricing:</span>
                 <span className="font-mono text-emerald-400 font-bold">{viewingProduct.price}</span>
               </div>
+
+              {viewingProduct.pricingTiers && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-[#141C2E]/60 border border-white/[0.04]">
+                  <span className="text-slate-400">Available Tiers:</span>
+                  <span className="font-mono text-slate-300 font-medium text-right">{viewingProduct.pricingTiers}</span>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <span className="text-[10px] uppercase font-mono font-bold text-slate-400">Description:</span>

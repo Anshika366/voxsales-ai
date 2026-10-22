@@ -119,72 +119,179 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
 
     if (hasAlreadyIntroduced) {
       return pickUnique([
-        `As I mentioned, I'm ${repName}, the AI sales specialist for ${product.name}! I help teams understand how ${product.name} cuts manual work, tracks deals, and accelerates pipeline velocity. Would you like to see a live demo or check our pricing?`,
-        `I am ${repName} from ${product.name}. My role is to help you explore the product, discuss features and pricing, and show live walkthroughs. What specific part would you like to look at?`
+        `As I mentioned, I'm ${repName}, the AI sales specialist for ${product.name}. I help teams understand how ${product.name} cuts manual work, tracks deals, and accelerates pipeline velocity. What specific question do you have about the product?`,
+        `I am ${repName} with ${product.name}. My role is to help you explore the product, discuss features and pricing, and show live walkthroughs. What would you like to explore next?`
       ], history);
     }
 
-    return `Hi! I'm ${repName}, the AI sales assistant for ${product.name}. I help teams understand the product, explore its features and pricing, and work out whether it fits their sales workflow. What would you like to know?`;
+    return `Hi! I'm ${repName}, the AI sales assistant for ${product.name}. I help teams understand the product, explore its features and pricing, and evaluate whether it fits their sales workflow. What would you like to know?`;
   }
 
-  // 3. Greetings & Casual Starters
-  const isGreeting =
-    lower === 'hi' ||
-    lower === 'hello' ||
-    lower === 'hey' ||
-    lower.startsWith('hi ') ||
-    lower.startsWith('hello ') ||
-    lower.startsWith('hey ') ||
-    lower.includes('good morning') ||
-    lower.includes('good afternoon') ||
-    lower.includes('good evening') ||
-    lower.includes('how are you') ||
-    lower.includes("what's up") ||
-    lower.includes('how are you doing');
+  // 3. Objections: "Why should I buy yours?" / Market crowded / Why choose you
+  const isWhyBuyObjection =
+    lower.includes('why should i buy') ||
+    lower.includes('why buy yours') ||
+    lower.includes('why buy your') ||
+    lower.includes('why should we buy') ||
+    lower.includes('why should we choose') ||
+    lower.includes('why choose yours') ||
+    lower.includes('why choose your') ||
+    lower.includes('why choose you') ||
+    lower.includes('many crms in the market') ||
+    lower.includes('many crms') ||
+    lower.includes('market has many') ||
+    lower.includes('other crms in the market') ||
+    lower.includes('crms in the market') ||
+    lower.includes('why flowdesk') ||
+    lower.includes('why should i go with') ||
+    lower.includes('why pick your') ||
+    lower.includes('convince me') ||
+    lower.includes('reasons to buy');
 
-  if (isGreeting && lower.length < 35) {
+  if (isWhyBuyObjection) {
     return pickUnique([
-      `Hello! Great to connect with you. I'm ${repName} from ${product.name}. How is your day going? Would you like a quick 60-second summary of what we do?`,
-      `Hi there! Thanks for speaking with me. I'm ${repName} with ${product.name}. I can answer any questions you have about our pipeline automation or show you a live demo. Where would you like to start?`,
-      `Hello! I'm ${repName} calling from ${product.name}. We help sales teams eliminate manual data entry and close deals faster. How can I help you today?`
+      `With many CRMs on the market, ${product.name} stands out by delivering transparent pricing at ${product.price || '$49 / seat / month'}, sales pipeline automation that eliminates 5 hours of manual data entry per rep weekly, and dedicated support. Would you like to see how the automated pipeline works in a quick live walkthrough?`,
+      `That is a very fair question in a crowded market. ${product.name} differentiates itself with zero-manual activity logging, real-time deal-risk alerts, and a setup time of under 10 minutes for ${product.price || '$49 / seat / month'}. Does eliminating manual CRM logging sound like a fit for your team?`
     ], history);
   }
 
-  // 4. Product Overview (What is this product / What does it do)
-  const isProductOverview =
-    lower.includes(`what is ${product.name.toLowerCase()}`) ||
-    lower.includes('what does it do') ||
-    lower.includes('what is this') ||
-    lower.includes('what do you sell') ||
-    lower.includes('tell me about the product') ||
-    lower.includes('tell me about this') ||
-    lower.includes('explain the product') ||
-    lower.includes('what is the product');
+  // 4. Competitor Comparison Requests ("Compare FlowDesk CRM pricing with other CRMs", etc.)
+  const isCompetitorComparison =
+    lower.includes('compare') ||
+    lower.includes('comparison') ||
+    lower.includes('versus') ||
+    lower.includes(' vs ') ||
+    lower.includes('vs.') ||
+    lower.includes('against other') ||
+    (lower.includes('other crm') && (lower.includes('pricing') || lower.includes('price') || lower.includes('cost') || lower.includes('how'))) ||
+    lower.includes('difference with other') ||
+    lower.includes('compared to other') ||
+    lower.includes('alternative to');
 
-  if (isProductOverview) {
+  if (isCompetitorComparison) {
+    const isSalesforce = lower.includes('salesforce');
+    const isHubspot = lower.includes('hubspot');
+    const isZoho = lower.includes('zoho');
+    const isPipedrive = lower.includes('pipedrive');
+    const specificTool = isSalesforce ? 'Salesforce' : isHubspot ? 'HubSpot' : isZoho ? 'Zoho' : isPipedrive ? 'Pipedrive' : null;
+
+    if (specificTool) {
+      return pickUnique([
+        `When comparing ${product.name} with ${specificTool}, key evaluation points are price, zero-manual logging automation, setup speed, and support. ${product.name} is $49 per seat per month on our standard Growth plan with setup under 10 minutes and 2-way sync with ${specificTool}. Because ${specificTool} pricing depends on specific editions and add-ons, which edition is your team reviewing?`,
+        `${product.name} and ${specificTool} can be evaluated across price, features, pipeline automation, integrations, and ease of use. While ${specificTool} serves as a large system of record, FlowDesk eliminates 5 hours of manual logging weekly at ${product.price || '$49 / seat / month'}. Which ${specificTool} plan are you currently evaluating?`
+      ], history);
+    }
+
     return pickUnique([
-      `${product.name} is ${product.description || product.pitch}. It helps sales teams ${product.valueProposition || 'save hours of admin time and close more deals'}. Would you like to see a live demo or check our pricing?`,
-      `${product.name} is designed to give sales teams complete visibility and speed by automating pipeline updates and alerting reps before deals slip. Would you like a 2-minute walkthrough?`
+      `When comparing ${product.name} with other CRMs, you can evaluate price, core features, sales pipeline automation, native integrations, ease of use, and support. ${product.name} is priced at ${product.pricingTiers || product.price || '$49 / seat / month'} with setup in under 10 minutes. Because competitor pricing and plans vary by vendor, which specific competitor would you like to compare against?`,
+      `When evaluating ${product.name} against other CRMs, the main comparison points are price, zero-manual logging automation, setup time, and dedicated support. Our plans start at ${product.pricingTiers || product.price || '$49 / seat / month'}. Which specific CRM or vendor are you comparing us with?`
     ], history);
   }
 
-  // 5. Purchase / Sign Up / Buy
-  if (
-    lower.includes('buy') ||
-    lower.includes('purchase') ||
-    lower.includes('sign up') ||
-    lower.includes('ready to start') ||
-    lower.includes('deal') ||
-    lower.includes('subscribe') ||
-    lower.includes('get started')
-  ) {
+  // 5. Is it Cheaper / Price Comparison ("Is your CRM cheaper than other options?" / "Is your CRM cheaper than Salesforce?")
+  const isCheaperQuery =
+    lower.includes('cheaper') ||
+    lower.includes('cheap') ||
+    lower.includes('less expensive') ||
+    lower.includes('lower price') ||
+    lower.includes('cost less') ||
+    lower.includes('cheapest') ||
+    lower.includes('more affordable');
+
+  if (isCheaperQuery) {
+    const isSalesforce = lower.includes('salesforce');
+    const isHubspot = lower.includes('hubspot');
+    const isZoho = lower.includes('zoho');
+    const isPipedrive = lower.includes('pipedrive');
+    const specificTool = isSalesforce ? 'Salesforce' : isHubspot ? 'HubSpot' : isZoho ? 'Zoho' : isPipedrive ? 'Pipedrive' : null;
+
+    if (specificTool) {
+      return pickUnique([
+        `${product.name} is priced at ${product.price || '$49 / seat / month'} on our standard Growth plan, with Starter at $29 and Enterprise at $89. While ${specificTool} offers various tiers that often involve higher per-seat commitments and implementation costs, an exact price comparison depends on your specific tier and seat count. Which ${specificTool} edition or plan are you currently reviewing?`,
+        `Our standard Growth plan is ${product.price || '$49 / seat / month'} and includes full pipeline automation and dedicated support. Comparing directly with ${specificTool} depends on the edition and contract terms, as enterprise CRM pricing varies widely. Which ${specificTool} edition are you comparing our price against?`
+      ], history);
+    }
+
+    return pickUnique([
+      `${product.name} is priced transparently at ${product.pricingTiers || product.price || '$49 / seat / month'}. Whether it is cheaper depends on the specific CRM and plan you compare against, as enterprise platforms often cost significantly more while basic contact tools may cost less. Which competitor's pricing are you currently comparing with?`,
+      `Our plans start at ${product.pricingTiers || product.price || '$49 / seat / month'}. Whether that is cheaper depends on which alternative and tier you are considering, but we deliver fast ROI by saving reps 5 hours of manual logging each week. Which specific CRM are you comparing our price to?`
+    ], history);
+  }
+
+  // 6. Feature Differentiation ("What features make your CRM different?")
+  const isDifferentiationQuery =
+    lower.includes('what features make') ||
+    lower.includes('features make your') ||
+    lower.includes('what makes your crm different') ||
+    lower.includes('what makes you different') ||
+    lower.includes('how are you different') ||
+    lower.includes('why are you different') ||
+    lower.includes('what is different') ||
+    lower.includes('what makes it different') ||
+    lower.includes('differentiator') ||
+    lower.includes('differentiating') ||
+    lower.includes('key difference') ||
+    lower.includes('different from others') ||
+    lower.includes('unique features');
+
+  if (isDifferentiationQuery) {
+    const f1 = product.keyFeatures?.[0] || 'Automatic call, email, and meeting sync with zero manual logging';
+    const f2 = product.keyFeatures?.[1] || 'Deal-risk alerts and automated pipeline revenue forecasting';
+    return pickUnique([
+      `${product.name} differentiates itself with zero manual data entry through ${f1.toLowerCase()}, proactive ${f2.toLowerCase()}, and setup in under 10 minutes with native Google and Microsoft integrations. Would you like to see these alerts in action?`,
+      `What makes ${product.name} different is eliminating manual admin: reps get ${f1.toLowerCase()} and ${f2.toLowerCase()} out of the box, with transparent pricing at ${product.price || '$49 / seat / month'}. Would you like a 2-minute walkthrough?`
+    ], history);
+  }
+
+  // 7. Manager / Stakeholder Deliberation ("I need to discuss this with my manager")
+  const isManagerDiscussion =
+    lower.includes('manager') ||
+    lower.includes('boss') ||
+    lower.includes('discuss this with') ||
+    lower.includes('discuss with') ||
+    lower.includes('talk to my') ||
+    lower.includes('talk with my') ||
+    lower.includes('check with my') ||
+    lower.includes('speak with my') ||
+    lower.includes('internal review') ||
+    lower.includes('need approval') ||
+    lower.includes('decision maker') ||
+    lower.includes('my team first');
+
+  if (isManagerDiscussion) {
+    return pickUnique([
+      `That makes complete sense, aligning with your manager is an important step. I can provide a concise summary covering our ${product.price || '$49 / seat / month'} pricing, key pipeline automation ROI numbers, and trial details, or we can arrange a quick 15-minute demo that your manager can join. Would you like me to send that summary over?`,
+      `I completely understand. To make your internal discussion easier, I can send over an executive overview with our pricing tiers, key time-saving metrics, and 14-day evaluation trial. Would an email summary be helpful for your team?`
+    ], history);
+  }
+
+  // 8. Explicit True Purchase Intent (Real buying signal, distinct from objections)
+  const isTrueBuyIntent =
+    !isWhyBuyObjection &&
+    (
+      lower.includes('ready to buy') ||
+      lower.includes('want to buy') ||
+      lower.includes('purchase now') ||
+      lower.includes('sign up now') ||
+      lower.includes('ready to start') ||
+      lower.includes('send invoice') ||
+      lower.includes('how to buy') ||
+      lower.includes('how do i subscribe') ||
+      lower.includes('ready to subscribe') ||
+      lower.startsWith('buy ') ||
+      lower === 'buy' ||
+      lower === 'purchase' ||
+      lower === 'sign up'
+    );
+
+  if (isTrueBuyIntent) {
     return pickUnique([
       `That is fantastic! I can get your ${product.name} account provisioned right away. Should I send the activation link to your work email?`,
       `Excellent! You are going to love the results. I will lock in our ${product.specialOffer || 'standard evaluation trial'} for your team right now. What is the best email address for your admin account?`
     ], history);
   }
 
-  // 6. Demo / Walkthrough / Screen share
+  // 9. Demo / Walkthrough / Screen share
   if (
     lower.includes('demo') ||
     lower.includes('walkthrough') ||
@@ -199,7 +306,7 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     ], history);
   }
 
-  // 7. Pricing / Cost / Plans
+  // 10. Pricing / Cost / Plans (General inquiry)
   if (
     lower.includes('price') ||
     lower.includes('cost') ||
@@ -222,25 +329,23 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     ], history);
   }
 
-  // 8. Competitors (HubSpot, Salesforce, etc.)
+  // 11. Known Integrations & Legacy systems
   if (
-    lower.includes('competitor') ||
-    lower.includes('hubspot') ||
     lower.includes('salesforce') ||
+    lower.includes('hubspot') ||
     lower.includes('zapier') ||
     lower.includes('zoho') ||
     lower.includes('pipedrive') ||
     lower.includes('already use') ||
-    lower.includes('difference') ||
-    lower.includes('alternative')
+    lower.includes('integrate') ||
+    lower.includes('integration')
   ) {
     return pickUnique([
-      `That makes total sense. ${product.name} integrates directly with platforms like Salesforce and HubSpot, so you can keep your existing records while automating pipeline tracking and deal alerts. Which tool are you currently using?`,
-      `That is a very common scenario. Most teams keep their existing system of record and use ${product.name} to eliminate the manual logging for their reps. Would you like to see how the sync works?`
+      `${product.name} integrates directly with platforms like Salesforce and HubSpot, so you can keep your existing records while automating pipeline tracking and deal alerts. Which tool are you currently using?`,
+      `Most teams keep their existing system of record and use ${product.name} to eliminate the manual logging for their reps via 2-way sync. Would you like to see how the sync works?`
     ], history);
   }
 
-  // 9. Legacy / Custom API
   if (
     lower.includes('legacy') ||
     lower.includes('internal system') ||
@@ -250,13 +355,12 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     return `Custom legacy internal systems are not verified out of the box with ${product.name} and would require a technical API or CSV evaluation. Would you like me to note down your system specs for our solutions engineering team?`;
   }
 
-  // 10. Features & Capabilities
+  // 12. Features & Capabilities
   if (
     lower.includes('feature') ||
     lower.includes('what can it do') ||
     lower.includes('how it works') ||
     lower.includes('capabilities') ||
-    lower.includes('explain') ||
     lower.includes('functions')
   ) {
     const f1 = product.keyFeatures?.[0] || 'automated pipeline tracking';
@@ -267,7 +371,25 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     ], history);
   }
 
-  // 11. Not interested / Decline
+  // 13. Product Overview
+  const isProductOverview =
+    lower.includes(`what is ${product.name.toLowerCase()}`) ||
+    lower.includes('what does it do') ||
+    lower.includes('what is this') ||
+    lower.includes('what do you sell') ||
+    lower.includes('tell me about the product') ||
+    lower.includes('tell me about this') ||
+    lower.includes('explain the product') ||
+    lower.includes('what is the product');
+
+  if (isProductOverview) {
+    return pickUnique([
+      `${product.name} is ${product.description || product.pitch}. It helps sales teams ${product.valueProposition || 'save hours of admin time and close more deals'}. What specific part would you like to explore?`,
+      `${product.name} is designed to give sales teams complete visibility and speed by automating pipeline updates and alerting reps before deals slip. Would you like a 2-minute walkthrough?`
+    ], history);
+  }
+
+  // 14. Decline / Not interested
   if (
     lower.includes('not interested') ||
     lower.includes('no thanks') ||
@@ -279,7 +401,30 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     return `I completely understand and appreciate your time today. Wishing you and your team all the best, and feel free to reach out if your needs change down the road!`;
   }
 
-  // 12. Email / Send info
+  // 15. Greetings & Casual Starters
+  const isGreeting =
+    lower === 'hi' ||
+    lower === 'hello' ||
+    lower === 'hey' ||
+    lower.startsWith('hi ') ||
+    lower.startsWith('hello ') ||
+    lower.startsWith('hey ') ||
+    lower.includes('good morning') ||
+    lower.includes('good afternoon') ||
+    lower.includes('good evening') ||
+    lower.includes('how are you') ||
+    lower.includes("what's up") ||
+    lower.includes('how are you doing');
+
+  if (isGreeting && lower.length < 35) {
+    return pickUnique([
+      `Hello! Great to connect with you. I'm ${repName} from ${product.name}. How is your day going? Would you like a quick 60-second summary of what we do?`,
+      `Hi there! Thanks for speaking with me. I'm ${repName} with ${product.name}. I can answer any questions you have about our pipeline automation or show you a live demo. Where would you like to start?`,
+      `Hello! I'm ${repName} calling from ${product.name}. We help sales teams eliminate manual data entry and close deals faster. How can I help you today?`
+    ], history);
+  }
+
+  // 16. Email / Send info
   if (
     lower.includes('email') ||
     lower.includes('send info') ||
@@ -290,12 +435,10 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     return `I will gladly send our executive specification sheet and pricing details to your email. What is the best email address to send that over to?`;
   }
 
-  // 13. Dynamic Fallback Pool (NEVER the same static sentence!)
+  // 17. Grounded Fallback Pool (Factual, acknowledges limitations, avoids repetitive loops)
   return pickUnique([
-    `Regarding ${product.name}, our primary focus is helping sales teams ${product.tagline || 'automate busywork and close deals faster'}. Are you more interested in exploring our features, checking out pricing, or seeing a live demo?`,
-    `To give you the most accurate answer for your team, are you curious about how ${product.name} integrates with your current workflow, or would you like to see our pricing plans?`,
-    `I want to make sure I answer your exact question about ${product.name}. We can discuss our features, pricing at ${product.price}, or launch an interactive walkthrough right now. What would be most helpful?`,
-    `Thanks for asking! ${product.name} is designed to eliminate manual data entry and keep deals on track. Would you like a 2-minute live walkthrough on your screen?`
+    `Regarding ${product.name}, our core focus is sales pipeline automation and zero manual logging for ${product.price || '$49 / seat / month'}. Since I am operating in offline assistance mode, I can share our verified features, pricing plans, or launch an interactive demo on your screen. What would be most helpful?`,
+    `To give you an accurate, product-grounded answer: ${product.name} is priced at ${product.price || '$49 / seat / month'} and eliminates repetitive CRM admin with under 10-minute setup. I can walk you through our specific features or start a live demo. What would you like to check?`
   ], history);
 }
 
@@ -337,7 +480,7 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
 
     if (hasAlreadyIntroduced) {
       return pickUnique([
-        `जैसा कि मैंने बताया, मैं ${product.name} की AI सेल्स असिस्टेंट ${repName} हूँ। मैं आपकी टीम को ऑटोमेशन और पाइपलाइन ट्रैकिंग समझने में मदद करती हूँ। क्या आप इसका लाइव डेमो देखना चाहेंगे या कीमत जानना चाहेंगे?`,
+        `जैसा कि मैंने बताया, मैं ${product.name} की AI सेल्स असिस्टेंट ${repName} हूँ। मैं आपकी टीम को ऑटोमेशन और पाइपलाइन ट्रैकिंग समझने में मदद करती हूँ। आप इसके बारे में क्या जानना चाहते हैं?`,
         `मैं ${product.name} से ${repName} हूँ। मेरा काम आपको प्रोडक्ट, फीचर्स और प्राइसिंग की सही जानकारी देना है। आप क्या जानना चाहते हैं?`
       ], history);
     }
@@ -345,7 +488,90 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     return `नमस्ते! मैं ${product.name} की AI सेल्स असिस्टेंट ${repName} हूँ। मैं टीमों को प्रोडक्ट के फीचर्स, प्राइसिंग और वर्कफ़्लो समझने में मदद करती हूँ। आप इसके बारे में क्या जानना चाहते हैं?`;
   }
 
-  // 3. Greetings in Hindi
+  // 3. Objections / Why buy yours in Hindi
+  if (
+    lower.includes('kyun kharidein') ||
+    lower.includes('kyu kharide') ||
+    lower.includes('kyun le') ||
+    lower.includes('kyu le') ||
+    lower.includes('bahut se crm') ||
+    lower.includes('bahut saare') ||
+    lower.includes('market me') ||
+    lower.includes('market mein') ||
+    lower.includes('मार्केट') ||
+    lower.includes('बाज़ार') ||
+    lower.includes('बाजार') ||
+    lower.includes('क्यों खरीदें') ||
+    lower.includes('क्यों लें') ||
+    lower.includes('क्यों ले') ||
+    lower.includes('आपका क्यों') ||
+    lower.includes('आपका ही क्यों') ||
+    lower.includes('aapka hi kyu') ||
+    lower.includes('aapka kyu') ||
+    lower.includes('why should i buy') ||
+    lower.includes('why buy')
+  ) {
+    return `मार्केट में कई CRM हैं, लेकिन ${product.name} $49 प्रति सीट प्रति महीना में पूरी पाइपलाइन ऑटोमेशन, बिना किसी मैन्युअल डेटा एंट्री के कॉल-ईमेल सिंक और 10-मिनट का आसान सेटअप देता है। क्या आप स्क्रीन पर इसका एक छोटा लाइव वॉकथ्रू देखना चाहेंगे?`;
+  }
+
+  // 4. Competitor comparison in Hindi
+  if (
+    lower.includes('tulna') ||
+    lower.includes('तुलना') ||
+    lower.includes('compare') ||
+    lower.includes('doosre crm') ||
+    lower.includes('dusre crm') ||
+    lower.includes('dusre option') ||
+    lower.includes('दूसरे crm') ||
+    lower.includes('अन्य crm') ||
+    lower.includes('aur crm')
+  ) {
+    return `${product.name} की तुलना करते समय आप कीमत, फीचर्स, सेल्स पाइपलाइन ऑटोमेशन, 1-क्लिक इंटीग्रेशन और सपोर्ट को देख सकते हैं। हमारी कीमत $49 प्रति सीट प्रति महीना है। सही तुलना के लिए क्या आप बता सकते हैं कि आप किस विशेष CRM से तुलना करना चाहते हैं?`;
+  }
+
+  // 5. Is it cheaper in Hindi
+  if (
+    lower.includes('sasta') ||
+    lower.includes('sasti') ||
+    lower.includes('सस्ता') ||
+    lower.includes('सस्ती') ||
+    lower.includes('कम दाम') ||
+    lower.includes('cheaper') ||
+    lower.includes('kam daam')
+  ) {
+    return `${product.name} की कीमत $49 प्रति सीट प्रति महीना है। यह सस्ता है या नहीं, यह इस बात पर निर्भर करता है कि आप किस CRM और प्लान से तुलना कर रहे हैं क्योंकि बड़े एंटरप्राइज़ CRM अक्सर काफी महंगे होते हैं। आप किस CRM की कीमत से तुलना करना चाहते हैं?`;
+  }
+
+  // 6. Differentiators in Hindi
+  if (
+    lower.includes('kya alag') ||
+    lower.includes('alag kya') ||
+    lower.includes('features alag') ||
+    lower.includes('अलग') ||
+    lower.includes('खास') ||
+    lower.includes('विशेष') ||
+    lower.includes('khas baat') ||
+    lower.includes('khasiyat') ||
+    lower.includes('special kya') ||
+    lower.includes('different kya')
+  ) {
+    return `${product.name} को खास बनाते हैं इसका ज़ीरो-मैन्युअल डेटा एंट्री, रियल-टाइम deal-risk अलर्ट्स और गूगल व माइक्रोसॉफ्ट के साथ 10-मिनट का आसान सेटअप। क्या आप इसे लाइव देखना चाहेंगे?`;
+  }
+
+  // 7. Manager discussion in Hindi
+  if (
+    lower.includes('manager') ||
+    lower.includes('boss') ||
+    lower.includes('team se') ||
+    lower.includes('मैनेजर') ||
+    lower.includes('बॉस') ||
+    lower.includes('baat karni') ||
+    lower.includes('baat karke')
+  ) {
+    return `जी बिल्कुल, अपने मैनेजर से चर्चा करना बहुत ज़रूरी है। मैं आपकी टीम के लिए $49 प्राइसिंग और मुख्य फायदों का एक छोटा सारांश भेज ${bol}, या हम आपके मैनेजर के साथ 15-मिनट का लाइव डेमो रख सकते हैं।`;
+  }
+
+  // 8. Greetings in Hindi
   if (
     lower === 'namaste' ||
     lower.includes('namaste') ||
@@ -361,7 +587,7 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     ], history);
   }
 
-  // 4. Pricing in Hindi
+  // 9. Pricing in Hindi
   if (
     lower.includes('price') ||
     lower.includes('daam') ||
@@ -374,7 +600,7 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     return `हमारी कीमत ${product.pricingTiers || product.price} है। इसमें कोई सेटअप फीस नहीं है और 14 दिन का ट्रायल भी शामिल है। आपकी टीम में कितने मेंबर्स हैं?`;
   }
 
-  // 5. Demo in Hindi
+  // 10. Demo in Hindi
   if (
     lower.includes('demo') ||
     lower.includes('dekhein') ||
@@ -386,7 +612,7 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     return `जी बिल्कुल! मैंने आपकी स्क्रीन पर ${product.name} का लाइव इंटरएक्टिव वॉकथ्रू लोड कर दिया है। आप सामने लाइव पाइपलाइन बोर्ड और ऑटोमेशन देख सकते हैं। क्या आप इसका उपयोग करके देखना चाहेंगे?`;
   }
 
-  // 6. Features in Hindi
+  // 11. Features in Hindi
   if (
     lower.includes('feature') ||
     lower.includes('kaam') ||
@@ -400,18 +626,19 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     return `${product.name} के दो मुख्य फायदे हैं: पहला, ${f1}, और दूसरा, ${f2}। क्या आप स्क्रीन पर इसका लाइव वॉकथ्रू देखना चाहेंगे?`;
   }
 
-  // 7. Buy in Hindi
+  // 12. Buy in Hindi (Excluding objections)
   if (
-    lower.includes('buy') ||
     lower.includes('kharidna') ||
     lower.includes('lena hai') ||
     lower.includes('लेना है') ||
-    lower.includes('खरीदना')
+    lower.includes('खरीदना') ||
+    lower === 'buy' ||
+    lower === 'purchase'
   ) {
     return `बहुत बढ़िया! मैं आपके लिए अभी अकाउंट सेटअप कर ${raha}। क्या मैं एक्टिवेशन लिंक आपके वर्क ईमेल पर भेज दूँ?`;
   }
 
-  // 8. Decline in Hindi
+  // 13. Decline in Hindi
   if (
     lower.includes('nahi chahiye') ||
     lower.includes('not interested') ||
@@ -420,11 +647,10 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     return `मैं आपकी बात का पूरा सम्मान करती हूँ। समय देने के लिए बहुत धन्यवाद, आपका दिन शुभ हो!`;
   }
 
-  // 9. Dynamic Hindi Fallback Pool
+  // 14. Dynamic Hindi Fallback Pool
   return pickUnique([
-    `जी बिल्कुल! ${product.name} आपकी टीम के समय को बचाने और प्रोसेस को आसान बनाने के लिए बनाया गया है। क्या मैं आपको इसके फीचर्स या कीमत के बारे में बताऊँ?`,
-    `आपके सवाल के लिए धन्यवाद। ${product.name} सेल्स टीमों के मैन्युअल काम को पूरी तरह ऑटोमेट करता है। क्या आप स्क्रीन पर इसका 2-मिनट का लाइव डेमो देखना चाहेंगे?`,
-    `मैं आपकी पूरी मदद करने के लिए यहाँ हूँ। क्या आप ${product.name} के मुख्य फीचर्स देखना चाहते हैं या हमारी प्राइसिंग के बारे में जानना चाहते हैं?`
+    `जी बिल्कुल! ${product.name} सेल्स टीमों के मैन्युअल काम को पूरी तरह ऑटोमेट करता है और इसकी कीमत $49 प्रति सीट प्रति महीना है। मैं आपको इसके फीचर्स या लाइव डेमो के बारे में बता ${bol}। आप क्या देखना चाहेंगे?`,
+    `आपके सवाल के लिए धन्यवाद। ${product.name} पाइपलाइन ऑटोमेशन पर आधारित है। क्या आप स्क्रीन पर इसका 2-मिनट का लाइव डेमो देखना चाहेंगे?`
   ], history);
 }
 
@@ -490,6 +716,7 @@ export function evaluateSalesDialogue({ transcript, product, callDuration }) {
     status = 'Not Interested';
     rationale = 'Prospect stated they do not need the software or declined further sales contact.';
   } else if (
+    userTextCombined.includes('manager') ||
     userTextCombined.includes('email me') ||
     userTextCombined.includes('send information') ||
     userTextCombined.includes('check with my team') ||
@@ -499,7 +726,7 @@ export function evaluateSalesDialogue({ transcript, product, callDuration }) {
     userTextCombined.includes('बाद में')
   ) {
     status = 'Follow-up Required';
-    rationale = 'Customer requested additional materials, collateral, or a future follow-up consultation.';
+    rationale = 'Customer requested additional materials, collateral, or a future follow-up consultation with management.';
   }
 
   return {

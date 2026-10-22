@@ -24,7 +24,9 @@ export const DEFAULT_SAAS_PRODUCTS = [
       price: 'At $49 a seat, closing just one additional deal per quarter completely pays for your annual team subscription.',
       competitors: 'Unlike legacy bloated CRMs, FlowDesk is lightweight, fast, and does the manual logging for your reps automatically.',
       time: 'Migration takes under 15 minutes with our automated CRM data ingestion wizard.'
-    }
+    },
+    comparisonPoints: 'When comparing CRMs, evaluate price, core features, sales pipeline automation, native integrations, ease of use, and support. FlowDesk costs $49/seat/month ($29 Starter, $89 Enterprise), eliminates 5 hours of manual logging per rep weekly, and sets up in under 10 minutes.',
+    keyDifferentiators: 'Zero-manual data entry via automatic activity logging, real-time deal-risk alerts with pipeline forecasting, and transparent per-seat pricing with dedicated support included.'
   },
   {
     id: 'omniflow',

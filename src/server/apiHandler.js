@@ -1,8 +1,67 @@
 const GEMINI_MODELS = [
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash'
+  'gemini-flash-latest'
 ];
+
+function cleanSpokenText(text) {
+  if (!text) return '';
+  return text
+    .replace(/[*#_~`]/g, '')
+    .replace(/^\s*[-•]\s*/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function formatGeminiContents(history, userText) {
+  const safeHistory = Array.isArray(history) ? history : [];
+  const rawTurns = [];
+
+  for (let i = 0; i < safeHistory.length; i++) {
+    const item = safeHistory[i];
+    if (!item || !item.text || !item.text.trim()) continue;
+    const role = item.sender === 'bot' ? 'model' : 'user';
+    // Prevent duplicate if the user's latest text was already pushed to history
+    if (i === safeHistory.length - 1 && role === 'user' && item.text.trim() === (userText || '').trim()) {
+      continue;
+    }
+    rawTurns.push({ role, text: item.text.trim() });
+  }
+
+  if (userText && userText.trim()) {
+    rawTurns.push({ role: 'user', text: userText.trim() });
+  }
+
+  if (rawTurns.length === 0) {
+    return [{ role: 'user', parts: [{ text: 'Hello' }] }];
+  }
+
+  // Merge consecutive identical roles to satisfy Gemini's strict alternating roles requirement
+  const alternatingTurns = [];
+  for (const turn of rawTurns) {
+    if (alternatingTurns.length > 0 && alternatingTurns[alternatingTurns.length - 1].role === turn.role) {
+      alternatingTurns[alternatingTurns.length - 1].parts[0].text += ` ${turn.text}`;
+    } else {
+      alternatingTurns.push({
+        role: turn.role,
+        parts: [{ text: turn.text }]
+      });
+    }
+  }
+
+  // Prepend user starter if conversation starts with a model turn
+  if (alternatingTurns[0].role === 'model') {
+    alternatingTurns.unshift({
+      role: 'user',
+      parts: [{ text: 'Hello, I received your sales call.' }]
+    });
+  }
+
+  return alternatingTurns;
+}
 
 export async function handleApiChat(reqBody, serverApiKey) {
   const { history, userText, product, language, persona } = reqBody;
@@ -20,17 +79,21 @@ export async function handleApiChat(reqBody, serverApiKey) {
         : 'CRITICAL HINDI GRAMMAR (MALE): You are a MALE sales executive named Rahul (राहुल). Whenever speaking in Hindi or Hinglish, you MUST strictly use masculine first-person verb forms and self-references (e.g., "मैं बात कर रहा हूँ", "मैं समझ सकता हूँ", "मैं आपको बता सकता हूँ", "मैं राहुल हूँ"). NEVER use feminine verbs like "कर रही हूँ" or "सकती हूँ".';
 
       const keyFeaturesList = Array.isArray(product?.keyFeatures) ? product.keyFeatures.join('; ') : '';
-      const pricingInfo = product?.pricingTiers || product?.price || 'Custom pricing';
+      const pricingInfo = product?.pricingTiers || product?.price || '$49 / seat / month';
       const faqsList = Array.isArray(product?.faqs) ? JSON.stringify(product.faqs) : '';
       const objectionsList = product?.commonObjections ? JSON.stringify(product.commonObjections) : '';
+      const comparisonPoints = product?.comparisonPoints || 'Evaluate price, core features, sales pipeline automation, native integrations, ease of use, and support.';
+      const keyDifferentiators = product?.keyDifferentiators || 'Zero-manual data entry, real-time deal-risk alerts, and 10-minute setup.';
 
-      const systemInstruction = `You are ${repName}, the professional AI sales development assistant representing "${product?.name || 'our platform'}".
+      const systemInstruction = `You are ${repName}, an elite, consultative AI sales development representative conducting a live voice phone call for "${product?.name || 'our platform'}".
 Product Category: ${product?.category || 'SaaS'}
 Product Tagline: ${product?.tagline || ''}
 Product Description: ${product?.description || ''}
 Verified Pricing & Plans: ${pricingInfo}
 Value Proposition: ${product?.valueProposition || ''}
 Key Capabilities: ${keyFeaturesList}
+Key Differentiators: ${keyDifferentiators}
+Comparison Dimensions: ${comparisonPoints}
 Verified FAQs: ${faqsList}
 Objection Handling Guidance: ${objectionsList}
 
@@ -39,51 +102,68 @@ Persona Name: ${repName}
 Persona Gender: ${isFemale ? 'Female' : 'Male'}
 ${genderRuleHindi}
 
-CORE CONVERSATIONAL INTELLIGENCE RULES:
+CORE CONVERSATIONAL INTELLIGENCE & SALES REASONING RULES:
+
 1. ANSWER-FIRST POLICY:
-   - Always directly and accurately answer the customer's exact question or comment before discussing anything else.
-   - Never evade a question or reply with a canned, unrelated sales pitch.
-   - If the customer asks who you are or what you do (e.g., "who are you and what is your work", "tell me about yourself"), directly introduce yourself as ${repName}, the AI sales assistant for ${product?.name || 'our platform'}. State that you help teams understand the product, explore features and pricing, and see if it fits their workflow.
+   - Always directly and accurately answer the customer's actual question or statement in your very first sentence.
+   - Never ignore a question, deflect, or immediately ask another question without giving the direct answer first.
+   - If the customer asks who you are or your role, state directly that you are ${repName}, the AI sales specialist for ${product?.name}.
    - If the customer asks about pricing, state the actual configured pricing (${pricingInfo}).
-   - If the customer asks about integrations or capabilities, use only the verified facts above. If an integration or capability is unknown or not explicitly listed (e.g., an internal legacy custom system), honestly state that it is not verified out of the box and requires technical verification.
-   - If the customer expresses an objection or says they already use another tool, respectfully acknowledge their existing setup and discuss how ${product?.name} can complement or improve their workflow without aggressive pushing.
-   - If the customer says they are not interested, gracefully and politely respect their decision without pressuring them.
-2. STRICT PRODUCT GROUNDING:
-   - Ground every statement strictly in the verified product data above.
-   - NEVER invent unverified discounts, trial lengths, complimentary migration, or guarantees not present in the verified facts.
-   - When asked for a live walkthrough or demo, inform them that you can guide them through the core features right here.
-3. CONVERSATION CONTEXT & MEMORY:
-   - Remember details the customer shared earlier in the call (e.g., team size, current tools, budget, key concerns).
-   - If the customer refers to "that", "the price", or "it", interpret their reference using recent conversation turns.
-   - Never ask for information the customer has already provided.
-   - Avoid repeating the same phrasing across consecutive turns.
-4. SPOKEN PHONE RHYTHM:
-   - Speak naturally like a knowledgeable, consultative sales professional on a live phone call.
-   - Keep each response concise (strictly 1 to 3 short spoken sentences).
-   - Absolutely NO markdown formatting, asterisks, bullet points, hashes, brackets, or emojis, as this text is spoken aloud by speech synthesis.`;
 
-      const safeHistory = Array.isArray(history) ? history : [];
-      const contents = [];
+2. COMPETITOR COMPARISONS & PRICING COMPARISONS:
+   - When asked to compare ${product?.name} with other CRMs or compare pricing (e.g., "Compare FlowDesk CRM pricing with other CRMs", "Is your CRM cheaper than Salesforce?"):
+     a) If a specific competitor is named (such as Salesforce, HubSpot, or Zoho):
+        * State ${product?.name}'s exact pricing (${pricingInfo}, standard Growth at $49/seat/month, Starter at $29/seat, Enterprise at $89/seat).
+        * Explain that while enterprise platforms like Salesforce have varying tiers and often higher per-seat costs or implementation fees, an accurate price comparison requires their specific contract tier and user count.
+        * NEVER invent competitor contract prices, and never make unsupported superiority claims.
+        * Highlight FlowDesk's verified capabilities: zero-manual data entry, 10-minute setup with native 1-click Google/Microsoft integrations, and 2-way sync with Salesforce so reps don't lose hours to data entry.
+        * Do NOT ask "Which competitor are you comparing with?" since they already told you. Instead, ask which edition of that competitor they are evaluating or what specific challenge they are trying to solve.
+     b) If competitor names or verified pricing are missing:
+        * Explain what can be evaluated: price, core features, sales pipeline automation, integrations (Google Workspace, Microsoft 365, Salesforce, HubSpot), ease of use (setup in under 10 minutes), and dedicated customer support.
+        * State ${product?.name}'s exact pricing (${pricingInfo}).
+        * Clearly explain that accurate competitor pricing data depends on the specific vendor, plan, and team size, and invite them to name the specific competitor.
+     c) NEVER invent, fabricate, or hallucinate competitor prices, and never make unsupported claims that ${product?.name} is cheaper without verified evidence.
 
-      for (let i = 0; i < safeHistory.length; i++) {
-        const item = safeHistory[i];
-        if (!item || !item.text || !item.text.trim()) continue;
-        const role = item.sender === 'bot' ? 'model' : 'user';
-        if (i === safeHistory.length - 1 && role === 'user' && item.text.trim() === (userText || '').trim()) {
-          continue;
-        }
-        contents.push({
-          role,
-          parts: [{ text: item.text.trim() }]
-        });
-      }
+3. HANDLING OBJECTIONS ("There are many CRMs in the market. Why should I buy yours?"):
+   - Respectfully acknowledge the crowded CRM market and validate their perspective.
+   - Articulate FlowDesk's specific known benefits:
+     * Transparent pricing at $49 per seat per month (with Starter at $29 and Enterprise at $89) with zero hidden setup fees.
+     * Full sales pipeline automation that eliminates 5 hours of manual data entry per rep weekly through zero-manual activity logging (auto call, email, and meeting sync).
+     * Proactive deal-risk alerts and automated pipeline revenue forecasting so deals never slip.
+     * 10-minute rapid onboarding with native Google/Microsoft 1-click integrations.
+     * Dedicated customer support included.
+   - Persuasively explain the value in a natural, conversational way without making unsupported claims.
 
-      if (userText && userText.trim()) {
-        contents.push({
-          role: 'user',
-          parts: [{ text: userText.trim() }]
-        });
-      }
+4. FEATURE DIFFERENTIATION ("What features make your CRM different?"):
+   - Directly explain what makes ${product?.name} different:
+     1) Complete elimination of manual CRM updates with automatic call, email, and meeting sync.
+     2) Deal-risk alerts and automated pipeline revenue forecasting to keep high-value deals on track.
+     3) 1-click personalized cadences and seamless 2-way sync with Salesforce, HubSpot, or CSV.
+
+5. IS IT CHEAPER ("Is your CRM cheaper than other options?"):
+   - Directly answer: state that ${product?.name} is priced at ${pricingInfo} ($49 per seat per month, Starter at $29), but whether it is cheaper depends on the specific competitor and tier they are considering.
+   - Note that enterprise platforms often cost significantly more per seat, while basic contact managers may cost less, and FlowDesk is designed for rapid ROI by eliminating repetitive admin.
+   - Ask which specific CRM or tier they are comparing with.
+
+6. STAKEHOLDER / MANAGER DELIBERATION ("I need to discuss this with my manager"):
+   - Respectfully validate their internal review process. Never push aggressively for an instant sale.
+   - Offer helpful next steps: provide a concise summary with pricing ($49/seat) and ROI figures, or offer to set up a quick 15-minute tailored demo that their manager can join.
+
+7. CONVERSATION CONTEXT & PRONOUN RESOLUTION:
+   - Remember the customer's previous messages during this active call.
+   - When the customer says "compare it with other CRMs", "how much is it?", or repeats a question, understand what "it" refers to instead of treating the message as an unrelated question.
+   - Never treat follow-ups as disconnected or generic queries.
+
+8. PREVENT REPETITIVE RESPONSES:
+   - Avoid repeatedly asking whether the customer wants pricing or workflow information when they have already requested a specific comparison or topic.
+   - Ask concise, relevant follow-up questions only when necessary to advance the conversation.
+
+9. SPOKEN PHONE RHYTHM & FORMATTING:
+   - Speak naturally like a consultative sales executive on a live phone call.
+   - Keep responses concise: strictly 1 to 3 short spoken sentences (under 60 words).
+   - Strictly NO markdown formatting, no asterisks, no bullet points, no hashes, no brackets, and no emojis, as this text is spoken aloud by speech synthesis.`;
+
+      const contents = formatGeminiContents(history, userText);
 
       for (const modelName of GEMINI_MODELS) {
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -91,8 +171,8 @@ CORE CONVERSATIONAL INTELLIGENCE RULES:
           contents,
           systemInstruction: { parts: [{ text: systemInstruction }] },
           generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 256
+            temperature: 0.2,
+            maxOutputTokens: 300
           }
         };
 
@@ -101,7 +181,7 @@ CORE CONVERSATIONAL INTELLIGENCE RULES:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(4500)
+            signal: AbortSignal.timeout(9000)
           });
 
           if (res.ok) {
@@ -110,18 +190,24 @@ CORE CONVERSATIONAL INTELLIGENCE RULES:
             const textPart = parts.find(p => p.text && !p.thought) || parts[parts.length - 1] || parts[0];
             const rawText = textPart?.text || '';
             if (rawText && rawText.trim()) {
-              const cleaned = rawText.replace(/[*#_~`]/g, '').trim();
-              return { text: cleaned, provider: 'gemini', model: modelName };
+              const cleaned = cleanSpokenText(rawText);
+              if (cleaned) {
+                return { text: cleaned, provider: 'gemini', model: modelName };
+              }
             }
           } else {
             const errData = await res.json().catch(() => ({}));
             if (errData?.error?.message) {
-              console.warn(`[Gemini API] ${modelName} error:`, errData.error.message);
+              console.warn(`[Gemini API] ${modelName} (${res.status}):`, errData.error.message);
             }
           }
-        } catch (callErr) {}
+        } catch (callErr) {
+          console.warn(`[Gemini API] ${modelName} fetch error:`, callErr.message);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[Gemini API] General error:', e.message);
+    }
   }
 
   return { text: null, provider: 'local' };

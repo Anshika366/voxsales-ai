@@ -16,7 +16,7 @@ function apiServerPlugin(apiKey) {
           res.end(JSON.stringify({
             aiConfigured: hasKey,
             provider: hasKey ? 'gemini' : 'local',
-            model: hasKey ? 'gemini-2.5-flash' : 'conversational-engine-v2'
+            model: hasKey ? 'gemini-flash-lite-latest' : 'conversational-engine-v2'
           }));
           return;
         }
