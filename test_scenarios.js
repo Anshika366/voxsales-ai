@@ -84,6 +84,37 @@ async function testLiveGemini() {
   console.log(`\nCONTEXT QUESTION: "${contextQuery}"`);
   console.log(`PROVIDER: ${liveContextRes.provider} | MODEL: ${liveContextRes.model}`);
   console.log(`GEMINI CONTEXT REPLY:\n${liveContextRes.text}`);
+
+  console.log('\n================================================================');
+  console.log('AUDIT STEP 3: HINDI CONVERSATION VERIFICATION');
+  console.log('================================================================');
+
+  const hindiQuestions = [
+    'बाज़ार में कई सारे CRM हैं। मुझे आपका CRM क्यों ख़रीदना चाहिए?',
+    'इसकी तुलना दूसरे CRM से करें।',
+    'क्या आपका CRM Salesforce से सस्ता है?',
+    'मुझे इस बारे में अपने मैनेजर से बात करनी होगी।',
+    'FlowDesk CRM में क्या अलग फीचर्स हैं?'
+  ];
+
+  for (const hq of hindiQuestions) {
+    const fbHindi = generateRuleBasedResponse({
+      userText: hq,
+      history: [{ sender: 'bot', text: 'नमस्ते, मैं FlowDesk CRM से बात कर रही हूँ।' }],
+      product,
+      langCode: 'hi-IN'
+    });
+    console.log(`\nHINDI Q: "${hq}"`);
+    console.log(`FALLBACK HINDI:\n${fbHindi}`);
+
+    const liveHindi = await handleApiChat({
+      userText: hq,
+      history: [{ sender: 'bot', text: 'नमस्ते, मैं FlowDesk CRM से बात कर रही हूँ।' }],
+      product
+    }, envKey);
+    console.log(`GEMINI HINDI (${liveHindi.model}):\n${liveHindi.text}`);
+    await new Promise(r => setTimeout(r, 600));
+  }
 }
 
 testLiveGemini();

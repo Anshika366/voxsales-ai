@@ -6,7 +6,7 @@ export const DEFAULT_SAAS_PRODUCTS = [
     tagline: 'Automated CRM Pipeline for High-Growth Sales Teams',
     category: 'Sales & CRM',
     price: '$49 / seat / month',
-    pricingTiers: 'Starter at $29/seat, Growth at $49/seat, Enterprise at $89/seat',
+    pricingTiers: 'Starter at $29/seat/month, Growth at $49/seat/month, Enterprise at $89/seat/month',
     description: 'FlowDesk CRM automates sales pipeline tracking, syncs multi-channel customer communications, and provides real-time deal closing intelligence.',
     keyFeatures: [
       'Automatic call, email, and meeting sync with zero manual logging',
@@ -15,17 +15,17 @@ export const DEFAULT_SAAS_PRODUCTS = [
     ],
     pitch: 'FlowDesk CRM gives your sales team unfair speed by eliminating manual data entry and warning reps before high-value deals slip, increasing quota attainment by 28%.',
     valueProposition: 'Eliminate 5 hours of manual CRM updates per rep each week while speeding up sales velocity.',
-    specialOffer: '14-day standard evaluation trial',
+    specialOffer: '14-day evaluation trial with zero credit card required',
     faqs: [
       { q: 'How long does setup take?', a: 'Under 10 minutes with native 1-click Google Workspace and Microsoft 365 integrations.' },
       { q: 'Can we import from existing CRM?', a: 'Yes, full automated 2-way sync with HubSpot, Salesforce, and CSV data.' }
     ],
     commonObjections: {
-      price: 'At $49 a seat, closing just one additional deal per quarter completely pays for your annual team subscription.',
+      price: 'At $49 a seat on our Growth plan, closing just one additional deal per quarter completely pays for your annual team subscription.',
       competitors: 'Unlike legacy bloated CRMs, FlowDesk is lightweight, fast, and does the manual logging for your reps automatically.',
       time: 'Migration takes under 15 minutes with our automated CRM data ingestion wizard.'
     },
-    comparisonPoints: 'When comparing CRMs, evaluate price, core features, sales pipeline automation, native integrations, ease of use, and support. FlowDesk costs $49/seat/month ($29 Starter, $89 Enterprise), eliminates 5 hours of manual logging per rep weekly, and sets up in under 10 minutes.',
+    comparisonPoints: 'When comparing CRMs, evaluate price, core features, sales pipeline automation, native integrations, ease of use, and support. FlowDesk costs $49/seat/month on Growth ($29/seat/month Starter, $89/seat/month Enterprise), eliminates an estimated 5 hours of manual logging per rep weekly, and sets up in under 10 minutes with native Google and Microsoft integrations.',
     keyDifferentiators: 'Zero-manual data entry via automatic activity logging, real-time deal-risk alerts with pipeline forecasting, and transparent per-seat pricing with dedicated support included.'
   },
   {

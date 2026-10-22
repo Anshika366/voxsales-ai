@@ -260,8 +260,8 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
 
   if (isManagerDiscussion) {
     return pickUnique([
-      `That makes complete sense, aligning with your manager is an important step. I can provide a concise summary covering our ${product.price || '$49 / seat / month'} pricing, key pipeline automation ROI numbers, and trial details, or we can arrange a quick 15-minute demo that your manager can join. Would you like me to send that summary over?`,
-      `I completely understand. To make your internal discussion easier, I can send over an executive overview with our pricing tiers, key time-saving metrics, and 14-day evaluation trial. Would an email summary be helpful for your team?`
+      `That makes complete sense, aligning with your manager is an important step. I can provide a concise summary covering our $49 per seat per month Growth pricing and key automation benefits right here in your transcript for you to copy and share, or you can explore our live interactive pipeline demo on screen together. Would you like me to outline those key points?`,
+      `I completely understand. To make your internal discussion easier, you can copy our verified pricing ($49/seat/month Growth, $29 Starter) and time-saving metrics directly from this transcript, or launch the interactive walkthrough on your screen right now. Would an on-screen summary be helpful for you to share?`
     ], history);
   }
 
@@ -286,8 +286,8 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
 
   if (isTrueBuyIntent) {
     return pickUnique([
-      `That is fantastic! I can get your ${product.name} account provisioned right away. Should I send the activation link to your work email?`,
-      `Excellent! You are going to love the results. I will lock in our ${product.specialOffer || 'standard evaluation trial'} for your team right now. What is the best email address for your admin account?`
+      `That is fantastic! You can get started right away with our 14-day evaluation trial on the Products page with zero credit card required, or I can launch the interactive live demo on your screen right now. Would you like to see the live demo?`,
+      `Excellent! You can begin evaluating ${product.name} immediately with our 14-day trial without needing a credit card. Would you like me to open the live interactive pipeline walkthrough on your screen?`
     ], history);
   }
 
@@ -432,7 +432,7 @@ export function generateRuleBasedResponse({ userText, history, product, langCode
     lower.includes('pdf') ||
     lower.includes('brochure')
   ) {
-    return `I will gladly send our executive specification sheet and pricing details to your email. What is the best email address to send that over to?`;
+    return `We do not dispatch outbound emails from this voice phone interface, but all of our verified pricing, features, and call summaries appear right here on your screen for you to copy and share, and you can also launch our live interactive demo. Would you like me to summarize the key points here?`;
   }
 
   // 17. Grounded Fallback Pool (Factual, acknowledges limitations, avoids repetitive loops)
@@ -568,7 +568,7 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     lower.includes('baat karni') ||
     lower.includes('baat karke')
   ) {
-    return `जी बिल्कुल, अपने मैनेजर से चर्चा करना बहुत ज़रूरी है। मैं आपकी टीम के लिए $49 प्राइसिंग और मुख्य फायदों का एक छोटा सारांश भेज ${bol}, या हम आपके मैनेजर के साथ 15-मिनट का लाइव डेमो रख सकते हैं।`;
+    return `जी बिल्कुल, अपने मैनेजर से चर्चा करना बहुत ज़रूरी है। मैं यहाँ स्क्रीन पर $49 प्रति सीट प्राइसिंग और मुख्य फायदों का सारांश बता ${bol} जिसे आप कॉपी करके अपने मैनेजर के साथ शेयर कर सकते हैं, या आप स्क्रीन पर लाइव डेमो देख सकते हैं।`;
   }
 
   // 8. Greetings in Hindi
@@ -635,7 +635,7 @@ function handleHindiDialogue(lower, product, isFemale, history = []) {
     lower === 'buy' ||
     lower === 'purchase'
   ) {
-    return `बहुत बढ़िया! मैं आपके लिए अभी अकाउंट सेटअप कर ${raha}। क्या मैं एक्टिवेशन लिंक आपके वर्क ईमेल पर भेज दूँ?`;
+    return `बहुत बढ़िया! आप बिना क्रेडिट कार्ड के 14-दिन के ट्रायल के साथ तुरंत शुरुआत कर सकते हैं, या मैं अभी आपकी स्क्रीन पर लाइव इंटरएक्टिव डेमो शुरू कर ${bol}। क्या आप स्क्रीन पर लाइव डेमो देखना चाहेंगे?`;
   }
 
   // 13. Decline in Hindi
